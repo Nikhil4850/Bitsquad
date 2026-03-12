@@ -1,0 +1,45 @@
+{
+  "VrnZmf5Khckp5hnn7yYkDQ": {
+    "key_id": "VrnZmf5Khckp5hnn7yYkDQ",
+    "key_hash": "3b7f8ddceebac0b03aa5ff8f4cf75cd1b379df0cb69142ee1111717c153bcef6",
+    "name": "Default API Key",
+    "created_at": "2026-03-11T22:13:19.103886",
+    "expires_at": "2027-03-11T22:13:19.103886",
+    "last_used": "2026-03-11T22:21:38.550270",
+    "usage_count": 5,
+    "is_active": true,
+    "permissions": [
+      "summarize",
+      "classify",
+      "admin"
+    ]
+  },
+  "OKgk5g5tBbZExaZksK_rTQ": {
+    "key_id": "OKgk5g5tBbZExaZksK_rTQ",
+    "key_hash": "84f2b6c5ed8757789afbc607f8f4ea271ee80e60a7fe03db1776ed7358b56a3c",
+    "name": "Default API Key",
+    "created_at": "2026-03-12T02:25:47.502322",
+    "expires_at": null,
+    "last_used": null,
+    "usage_count": 0,
+    "is_active": true,
+    "permissions": [
+      "summarize",
+      "classify"
+    ]
+  },
+  "v914xYhvIA05VobNMPcDDQ": {
+    "key_id": "v914xYhvIA05VobNMPcDDQ",
+    "key_hash": "a6bbce9ef551912f5124499ba087c6377d2e6e4699e98cbab0db0188d26cb13f",
+    "name": "Production API Key",
+    "created_at": "2026-03-12T04:07:48.846188",
+    "expires_at": "2027-03-12T04:07:48.846188",
+    "last_used": null,
+    "usage_count": 0,
+    "is_active": true,
+    "permissions": [
+      "summarize",
+      "classify"
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Auto Open Terminal",
+  "description": "Automatically opens the terminal when Kiro executes shell commands during work",
+  "version": "1",
+  "when": {
+    "type": "preToolUse",
+    "toolTypes": [
+      "shell"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Open the terminal view so the user can see command execution"
+  }
+}

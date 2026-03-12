@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Summarizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">
+                📄 Document Summarizer
+            </h1>
+            <p class="text-center text-gray-600 mb-8">
+                Powered by Groq AI - Upload any document to get a simple summary
+            </p>
+
+            <!-- API Key Section -->
+            <div class="mb-8 bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <label class="block text-sm font-medium text-amber-900 mb-2">
+                    🔐 API Key
+                </label>
+                <div class="flex gap-2">
+                    <input 
+                        type="password" 
+                        id="apiKeyInput" 
+                        placeholder="Enter your API key (docsum_...)" 
+                        class="flex-1 px-3 py-2 border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    >
+                    <button id="showApiKeyBtn" class="bg-amber-200 text-amber-800 px-3 py-2 rounded-md hover:bg-amber-300">
+                        👁️
+                    </button>
+                    <button id="saveApiKeyBtn" class="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700">
+                        Save
+                    </button>
+                </div>
+                <p class="text-xs text-amber-700 mt-2">
+                    API key is required. Get one from the API admin or use the default key shown on server start.
+                    <a href="#" id="apiKeyHelp" class="underline hover:text-amber-900">How to get a key?</a>
+                </p>
+            </div>
+
+            <!-- File Upload Section -->
+            <div class="mb-8">
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
+                    <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.md,.jpg,.jpeg,.png,.bmp,.gif,.tiff,.webp" class="hidden">
+                    <label for="fileInput" class="cursor-pointer">
+                        <div class="mb-4">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                        </div>
+                        <p class="text-lg text-gray-600 mb-2">Click to upload or drag and drop</p>
+                        <p class="text-sm text-gray-500">PDF, DOCX, TXT, MD, JPG, PNG, and other image files (Max 10MB)</p>
+                    </label>
+                </div>
+                <div id="fileInfo" class="mt-4 hidden">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p class="text-sm text-blue-800">
+                            <strong>Selected:</strong> <span id="fileName"></span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Type Toggle -->
+            <div class="mb-8">
+                <label class="block text-sm font-medium text-gray-700 mb-3">
+                    Document Type
+                </label>
+                <div class="grid grid-cols-3 gap-4">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="documentType" value="auto" class="sr-only peer" checked>
+                        <div class="border-2 rounded-lg p-4 text-center peer-checked:border-purple-500 peer-checked:bg-purple-50 hover:border-gray-300">
+                            <div class="font-semibold">🔍 Auto-Detect</div>
+                            <div class="text-sm text-gray-500">Let AI identify</div>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="documentType" value="general" class="sr-only peer">
+                        <div class="border-2 rounded-lg p-4 text-center peer-checked:border-green-500 peer-checked:bg-green-50 hover:border-gray-300">
+                            <div class="font-semibold">📄 General</div>
+                            <div class="text-sm text-gray-500">Reports, articles</div>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="documentType" value="legal" class="sr-only peer">
+                        <div class="border-2 rounded-lg p-4 text-center peer-checked:border-amber-500 peer-checked:bg-amber-50 hover:border-gray-300">
+                            <div class="font-semibold">⚖️ Legal</div>
+                            <div class="text-sm text-gray-500">Contracts, briefs</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Detected Document Type Display -->
+            <div id="detectedType" class="mb-8 hidden">
+                <div class="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-purple-800 font-semibold mb-1">🔍 Detected Document Type</p>
+                            <p id="detectedCategory" class="text-lg font-bold text-gray-800"></p>
+                            <p id="detectedSubcategory" class="text-sm text-gray-600"></p>
+                        </div>
+                        <div class="text-right">
+                            <span id="confidenceBadge" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800"></span>
+                            <p class="text-xs text-gray-500 mt-1">AI Confidence</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Legal Analysis Type (shown only for legal docs) -->
+            <div id="legalOptions" class="mb-8 hidden">
+                <label class="block text-sm font-medium text-gray-700 mb-3">
+                    Legal Analysis Type
+                </label>
+                <div class="grid grid-cols-2 gap-4">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="legalType" value="comprehensive" class="sr-only peer" checked>
+                        <div class="border-2 rounded-lg p-3 text-center peer-checked:border-amber-500 peer-checked:bg-amber-50 hover:border-gray-300">
+                            <div class="font-semibold">Comprehensive</div>
+                            <div class="text-xs text-gray-500">Full legal analysis</div>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="legalType" value="contract" class="sr-only peer">
+                        <div class="border-2 rounded-lg p-3 text-center peer-checked:border-amber-500 peer-checked:bg-amber-50 hover:border-gray-300">
+                            <div class="font-semibold">Contract</div>
+                            <div class="text-xs text-gray-500">Agreement analysis</div>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="legalType" value="court" class="sr-only peer">
+                        <div class="border-2 rounded-lg p-3 text-center peer-checked:border-amber-500 peer-checked:bg-amber-50 hover:border-gray-300">
+                            <div class="font-semibold">Court Document</div>
+                            <div class="text-xs text-gray-500">Litigation analysis</div>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="legalType" value="executive" class="sr-only peer">
+                        <div class="border-2 rounded-lg p-3 text-center peer-checked:border-amber-500 peer-checked:bg-amber-50 hover:border-gray-300">
+                            <div class="font-semibold">Executive</div>
+                            <div class="text-xs text-gray-500">Quick summary</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Detail Level Selection -->
+            <div class="mb-8">
+                <label class="block text-sm font-medium text-gray-700 mb-3">
+                    Summary Detail Level
+                </label>
+                <div class="grid grid-cols-3 gap-4">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="detailLevel" value="brief" class="sr-only peer">
+                        <div class="border-2 rounded-lg p-4 text-center peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300">
+                            <div class="font-semibold">Brief</div>
+                            <div class="text-sm text-gray-500">2-3 sentences</div>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="detailLevel" value="medium" class="sr-only peer" checked>
+                        <div class="border-2 rounded-lg p-4 text-center peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300">
+                            <div class="font-semibold">Medium</div>
+                            <div class="text-sm text-gray-500">Concise summary</div>
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="detailLevel" value="detailed" class="sr-only peer">
+                        <div class="border-2 rounded-lg p-4 text-center peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300">
+                            <div class="font-semibold">Detailed</div>
+                            <div class="text-sm text-gray-500">Comprehensive</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="mb-8">
+                <button id="summarizeBtn" class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    Generate Summary
+                </button>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="hidden text-center py-8">
+                <div class="loading-spinner mx-auto mb-4"></div>
+                <p class="text-gray-600">Processing document and generating summary...</p>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results" class="hidden">
+                <div class="border-t pt-6">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-800">Summary</h2>
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <p id="summaryText" class="text-gray-700 leading-relaxed"></p>
+                    </div>
+                    <div class="mt-4 flex gap-4">
+                        <button id="copyBtn" class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
+                            📋 Copy Summary
+                        </button>
+                        <button id="downloadBtn" class="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors">
+                            💾 Download Summary
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Section -->
+            <div id="errorSection" class="hidden">
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p class="text-red-800">
+                        <strong>Error:</strong> <span id="errorMessage"></span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        let detectedDocType = null;
+        let apiKey = localStorage.getItem('documentSummarizerApiKey') || '';
+
+        // API Key handling
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const showApiKeyBtn = document.getElementById('showApiKeyBtn');
+        const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+
+        // Load saved API key
+        if (apiKey) {
+            apiKeyInput.value = apiKey;
+        }
+
+        // Toggle API key visibility
+        showApiKeyBtn.addEventListener('click', () => {
+            if (apiKeyInput.type === 'password') {
+                apiKeyInput.type = 'text';
+                showApiKeyBtn.textContent = '🙈';
+            } else {
+                apiKeyInput.type = 'password';
+                showApiKeyBtn.textContent = '👁️';
+            }
+        });
+
+        // Save API key
+        saveApiKeyBtn.addEventListener('click', () => {
+            apiKey = apiKeyInput.value.trim();
+            if (apiKey) {
+                localStorage.setItem('documentSummarizerApiKey', apiKey);
+                alert('API key saved!');
+            } else {
+                alert('Please enter an API key');
+            }
+        });
+
+        function getApiKey() {
+            const key = apiKeyInput.value.trim() || apiKey;
+            if (!key) {
+                showError('API key is required. Please enter your API key.');
+                return null;
+            }
+            return key;
+        }
+
+        // File input handling
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const summarizeBtn = document.getElementById('summarizeBtn');
+
+        // Document type toggle
+        const documentTypeRadios = document.querySelectorAll('input[name="documentType"]');
+        const legalOptions = document.getElementById('legalOptions');
+        const detectedTypeDiv = document.getElementById('detectedType');
+
+        documentTypeRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const value = e.target.value;
+                if (value === 'legal') {
+                    legalOptions.classList.remove('hidden');
+                } else {
+                    legalOptions.classList.add('hidden');
+                }
+
+                // Hide detected type if user manually selects
+                if (value !== 'auto') {
+                    detectedTypeDiv.classList.add('hidden');
+                } else if (detectedDocType) {
+                    detectedTypeDiv.classList.remove('hidden');
+                }
+            });
+        });
+
+        // Auto-detect document type
+        async function autoDetectDocumentType(file) {
+            const key = getApiKey();
+            if (!key) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/classify', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${key}`
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    detectedDocType = result;
+                    displayDetectedType(result);
+
+                    // Auto-select the appropriate radio button if in auto mode
+                    const autoRadio = document.querySelector('input[name="documentType"][value="auto"]');
+                    if (autoRadio.checked) {
+                        if (result.is_legal) {
+                            legalOptions.classList.remove('hidden');
+                            // Auto-select appropriate legal analysis type
+                            const legalTypeRadio = document.querySelector(`input[name="legalType"][value="${result.category}"]`);
+                            if (legalTypeRadio) {
+                                legalTypeRadio.checked = true;
+                            }
+                        }
+                    }
+                } else {
+                    showError(result.detail || 'Auto-detection failed');
+                }
+            } catch (error) {
+                console.error('Auto-detection failed:', error);
+            }
+        }
+
+        function displayDetectedType(result) {
+            const detectedTypeDiv = document.getElementById('detectedType');
+            const detectedCategory = document.getElementById('detectedCategory');
+            const detectedSubcategory = document.getElementById('detectedSubcategory');
+            const confidenceBadge = document.getElementById('confidenceBadge');
+
+            detectedCategory.textContent = result.category_display;
+
+            if (result.subcategory && result.subcategory !== 'other') {
+                detectedSubcategory.textContent = result.subcategory_display;
+                detectedSubcategory.classList.remove('hidden');
+            } else {
+                detectedSubcategory.classList.add('hidden');
+            }
+
+            const confidence = Math.round(result.confidence * 100);
+            confidenceBadge.textContent = `${confidence}%`;
+
+            // Color code based on confidence
+            if (confidence >= 80) {
+                confidenceBadge.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800';
+            } else if (confidence >= 50) {
+                confidenceBadge.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800';
+            } else {
+                confidenceBadge.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800';
+            }
+
+            detectedTypeDiv.classList.remove('hidden');
+        }
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                if (file.size > 10 * 1024 * 1024) {
+                    showError('File size must be less than 10MB');
+                    return;
+                }
+                selectedFile = file;
+                fileName.textContent = file.name;
+                fileInfo.classList.remove('hidden');
+                summarizeBtn.disabled = false;
+
+                // Trigger auto-detection
+                await autoDetectDocumentType(file);
+            }
+        });
+
+        // Drag and drop
+        const dropZone = document.querySelector('.border-dashed');
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-blue-500', 'bg-blue-50');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+        });
+
+        dropZone.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+            
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                fileInput.files = e.dataTransfer.files;
+                const event = new Event('change', { bubbles: true });
+                fileInput.dispatchEvent(event);
+            }
+        });
+
+        // Summarize button
+        summarizeBtn.addEventListener('click', async () => {
+            if (!selectedFile) {
+                showError('Please select a file first');
+                return;
+            }
+
+            const key = getApiKey();
+            if (!key) return;
+
+            const detailLevel = document.querySelector('input[name="detailLevel"]:checked').value;
+            let documentType = document.querySelector('input[name="documentType"]:checked').value;
+
+            // If auto mode, use detected type
+            if (documentType === 'auto' && detectedDocType) {
+                documentType = detectedDocType.suggested_mode;
+            }
+            
+            // Show loading
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+            document.getElementById('errorSection').classList.add('hidden');
+            summarizeBtn.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                formData.append('detail_level', detailLevel);
+
+                let endpoint = '/api/summarize';
+                
+                if (documentType === 'legal') {
+                    endpoint = '/api/summarize-legal';
+                    const legalType = document.querySelector('input[name="legalType"]:checked').value;
+                    formData.append('analysis_type', legalType);
+                } else {
+                    formData.append('document_type', documentType);
+                }
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${key}`
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showSummary(result.summary, documentType);
+                } else {
+                    showError(result.detail || 'Failed to generate summary');
+                }
+            } catch (error) {
+                showError('Network error. Please check if the server is running.');
+            } finally {
+                document.getElementById('loadingState').classList.add('hidden');
+                summarizeBtn.disabled = false;
+            }
+        });
+
+        // Copy button
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            const summaryText = document.getElementById('summaryText').textContent;
+            navigator.clipboard.writeText(summaryText).then(() => {
+                alert('Summary copied to clipboard!');
+            });
+        });
+
+        // Download button
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            const summaryText = document.getElementById('summaryText').textContent;
+            const blob = new Blob([summaryText], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'summary.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        });
+
+        function showSummary(summary, docType) {
+            const resultsSection = document.getElementById('results');
+            const title = resultsSection.querySelector('h2');
+            
+            if (docType === 'legal') {
+                title.innerHTML = '⚖️ Legal Document Analysis';
+            } else {
+                title.innerHTML = '📄 Summary';
+            }
+            
+            document.getElementById('summaryText').textContent = summary;
+            resultsSection.classList.remove('hidden');
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorSection').classList.remove('hidden');
+        }
+
+        // API Key Help
+        document.getElementById('apiKeyHelp').addEventListener('click', (e) => {
+            e.preventDefault();
+            alert('To get an API key:\n\n1. Check the server console on startup - it shows the default key\n2. Or use the admin endpoint: POST /api/keys/generate with admin_key\n3. Default admin key is in your .env file or "admin123"\n\nExample API Key format: docsum_xxxxx_yyyyy');
+        });
+    </script>
+</body>
+</html>
